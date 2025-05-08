@@ -13,9 +13,9 @@ import com.ruoyi.system.domain.SysPost;
 import com.ruoyi.system.domain.SysUserPost;
 import com.ruoyi.system.domain.SysUserRole;
 import com.ruoyi.system.mapper.*;
-import com.ruoyi.system.service.ISysDeptService;
 import com.ruoyi.system.service.ISysUserService;
 import com.ruoyi.system.service.SysConfigService;
+import com.ruoyi.system.service.SysDeptService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Validator;
 import org.apache.commons.lang3.ObjectUtils;
@@ -58,7 +58,7 @@ public class SysUserServiceImpl implements ISysUserService {
     private SysConfigService configService;
 
     @Resource
-    private ISysDeptService deptService;
+    private SysDeptService deptService;
 
     @Resource
     protected Validator validator;
@@ -161,9 +161,9 @@ public class SysUserServiceImpl implements ISysUserService {
     public boolean checkUserNameUnique(SysUser user) {
         SysUser info = userMapper.checkUserNameUnique(user.getUserName());
         if (StringUtils.isNotNull(info) && ObjectUtils.notEqual(info.getUserId(), user.getUserId())) {
-            return UserConstants.NOT_UNIQUE;
+            return !UserConstants.NOT_UNIQUE;
         }
-        return UserConstants.UNIQUE;
+        return !UserConstants.UNIQUE;
     }
 
     /**
@@ -175,9 +175,9 @@ public class SysUserServiceImpl implements ISysUserService {
     public boolean checkPhoneUnique(SysUser user) {
         SysUser info = userMapper.checkPhoneUnique(user.getPhonenumber());
         if (StringUtils.isNotNull(info) && ObjectUtils.notEqual(info.getUserId(), user.getUserId())) {
-            return UserConstants.NOT_UNIQUE;
+            return !UserConstants.NOT_UNIQUE;
         }
-        return UserConstants.UNIQUE;
+        return !UserConstants.UNIQUE;
     }
 
     /**
@@ -189,9 +189,9 @@ public class SysUserServiceImpl implements ISysUserService {
     public boolean checkEmailUnique(SysUser user) {
         SysUser info = userMapper.checkEmailUnique(user.getEmail());
         if (StringUtils.isNotNull(info) && ObjectUtils.notEqual(info.getUserId(), user.getUserId())) {
-            return UserConstants.NOT_UNIQUE;
+            return !UserConstants.NOT_UNIQUE;
         }
-        return UserConstants.UNIQUE;
+        return !UserConstants.UNIQUE;
     }
 
     /**
@@ -281,7 +281,7 @@ public class SysUserServiceImpl implements ISysUserService {
      */
     @Override
     @Transactional
-    public void insertUserAuth(Long userId, Long[] roleIds) {
+    public void insertUserAuth(Long userId, String[] roleIds) {
         userRoleMapper.deleteUserRoleByUserId(userId);
         insertUserRole(userId, roleIds);
     }
@@ -378,34 +378,18 @@ public class SysUserServiceImpl implements ISysUserService {
      * @param userId  用户ID
      * @param roleIds 角色组
      */
-    public void insertUserRole(Long userId, Long[] roleIds) {
+    public void insertUserRole(Long userId, String[] roleIds) {
         if (StringUtils.isNotEmpty(roleIds)) {
             // 新增用户与角色管理
             List<SysUserRole> list = new ArrayList<>(roleIds.length);
-            for (Long roleId : roleIds) {
+            for (String roleId : roleIds) {
                 SysUserRole ur = new SysUserRole();
                 ur.setUserId(userId);
-                ur.setRoleId(roleId);
+                ur.setRoleId(Long.valueOf(roleId));
                 list.add(ur);
             }
             userRoleMapper.batchUserRole(list);
         }
-    }
-
-    /**
-     * 通过用户ID删除用户
-     *
-     * @param userId 用户ID
-     * @return 结果
-     */
-    @Override
-    @Transactional
-    public int deleteUserById(Long userId) {
-        // 删除用户与角色关联
-        userRoleMapper.deleteUserRoleByUserId(userId);
-        // 删除用户与岗位表
-        userPostMapper.deleteUserPostByUserId(userId);
-        return userMapper.deleteUserById(userId);
     }
 
     /**
@@ -451,7 +435,7 @@ public class SysUserServiceImpl implements ISysUserService {
                 SysUser u = userMapper.selectUserByUserName(user.getUserName());
                 if (StringUtils.isNull(u)) {
                     BeanValidators.validateWithException(validator, user);
-                    deptService.checkDeptDataScope(user.getDeptId());
+                    deptService.checkDeptDataScope(String.valueOf(user.getDeptId()));
                     String password = configService.selectConfigValue("sys.user.initPassword");
                     user.setPassword(SecurityUtils.encryptPassword(password));
                     user.setCreateBy(operName);
@@ -462,7 +446,7 @@ public class SysUserServiceImpl implements ISysUserService {
                     BeanValidators.validateWithException(validator, user);
                     checkUserAllowed(u);
                     checkUserDataScope(u.getUserId());
-                    deptService.checkDeptDataScope(user.getDeptId());
+                    deptService.checkDeptDataScope(String.valueOf(user.getDeptId()));
                     user.setUserId(u.getUserId());
                     user.setUpdateBy(operName);
                     userMapper.updateUser(user);
