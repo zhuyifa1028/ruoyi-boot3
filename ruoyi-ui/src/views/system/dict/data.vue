@@ -1,13 +1,14 @@
+<!--suppress JSUnresolvedReference, HtmlDeprecatedAttribute, VueUnrecognizedDirective, JSValidateTypes -->
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
       <el-form-item label="字典名称" prop="dictType">
         <el-select v-model="queryParams.dictType">
           <el-option
-            v-for="item in typeOptions"
-            :key="item.dictId"
-            :label="item.dictName"
-            :value="item.dictType"
+            v-for="dict in dict.type.sys_dict_type"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
           />
         </el-select>
       </el-form-item>
@@ -92,11 +93,11 @@
 
     <el-table v-loading="loading" :data="dataList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="字典编码" align="center" prop="dictCode" />
+      <el-table-column label="字典编码" align="center" prop="dictId"/>
       <el-table-column label="字典标签" align="center" prop="dictLabel">
         <template slot-scope="scope">
-          <span v-if="(scope.row.listClass == '' || scope.row.listClass == 'default') && (scope.row.cssClass == '' || scope.row.cssClass == null)">{{ scope.row.dictLabel }}</span>
-          <el-tag v-else :type="scope.row.listClass == 'primary' ? '' : scope.row.listClass" :class="scope.row.cssClass">{{ scope.row.dictLabel }}</el-tag>
+          <span v-if="(scope.row.listClass === '' || scope.row.listClass === 'default') && (scope.row.cssClass === '' || scope.row.cssClass == null)">{{ scope.row.dictLabel }}</span>
+          <el-tag v-else :type="scope.row.listClass === 'primary' ? '' : scope.row.listClass" :class="scope.row.cssClass">{{ scope.row.dictLabel }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="字典键值" align="center" prop="dictValue" />
@@ -135,7 +136,7 @@
     <pagination
       v-show="total>0"
       :total="total"
-      :page.sync="queryParams.pageNum"
+      :page.sync="queryParams.pageNumber"
       :limit.sync="queryParams.pageSize"
       @pagination="getList"
     />
@@ -190,12 +191,11 @@
 </template>
 
 <script>
-import { listData, getData, delData, addData, updateData } from "@/api/system/dict/data";
-import { optionselect as getDictOptionselect, getType } from "@/api/system/dict/type";
+import { addData, delData, getData, listData, updateData } from "@/api/system/dict/data";
 
 export default {
   name: "Data",
-  dicts: ['sys_normal_disable'],
+  dicts: ['sys_dict_type', 'sys_normal_disable'],
   data() {
     return {
       // 遮罩层
@@ -249,7 +249,7 @@ export default {
       typeOptions: [],
       // 查询参数
       queryParams: {
-        pageNum: 1,
+        pageNumber: 1,
         pageSize: 10,
         dictType: undefined,
         dictLabel: undefined,
@@ -273,30 +273,19 @@ export default {
   },
   created() {
     const dictId = this.$route.params && this.$route.params.dictId;
-    this.getType(dictId);
-    this.getTypeList();
+    this.queryParams.dictType = dictId;
+    this.defaultDictType = dictId;
+
+    this.getList();
   },
   methods: {
-    /** 查询字典类型详细 */
-    getType(dictId) {
-      getType(dictId).then(response => {
-        this.queryParams.dictType = response.data.dictType;
-        this.defaultDictType = response.data.dictType;
-        this.getList();
-      });
-    },
-    /** 查询字典类型列表 */
-    getTypeList() {
-      getDictOptionselect().then(response => {
-        this.typeOptions = response.data;
-      });
-    },
     /** 查询字典数据列表 */
     getList() {
       this.loading = true;
       listData(this.queryParams).then(response => {
-        this.dataList = response.rows;
-        this.total = response.total;
+        const { data, total } = response
+        this.dataList = data;
+        this.total = total;
         this.loading = false;
       });
     },
@@ -308,7 +297,7 @@ export default {
     // 表单重置
     reset() {
       this.form = {
-        dictCode: undefined,
+        dictId: undefined,
         dictLabel: undefined,
         dictValue: undefined,
         cssClass: undefined,
@@ -321,7 +310,7 @@ export default {
     },
     /** 搜索按钮操作 */
     handleQuery() {
-      this.queryParams.pageNum = 1;
+      this.queryParams.pageNumber = 1;
       this.getList();
     },
     /** 返回按钮操作 */
@@ -344,15 +333,15 @@ export default {
     },
     // 多选框选中数据
     handleSelectionChange(selection) {
-      this.ids = selection.map(item => item.dictCode)
-      this.single = selection.length!=1
+      this.ids = selection.map(item => item.dictId)
+      this.single = selection.length !== 1
       this.multiple = !selection.length
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
-      const dictCode = row.dictCode || this.ids
-      getData(dictCode).then(response => {
+      const dictId = row.dictId || this.ids
+      getData(dictId).then(response => {
         this.form = response.data;
         this.open = true;
         this.title = "修改字典数据";
@@ -362,15 +351,15 @@ export default {
     submitForm: function() {
       this.$refs["form"].validate(valid => {
         if (valid) {
-          if (this.form.dictCode != undefined) {
-            updateData(this.form).then(response => {
+          if (this.form.dictId !== undefined) {
+            updateData(this.form).then(() => {
               this.$store.dispatch('dict/removeDict', this.queryParams.dictType);
               this.$modal.msgSuccess("修改成功");
               this.open = false;
               this.getList();
             });
           } else {
-            addData(this.form).then(response => {
+            addData(this.form).then(() => {
               this.$store.dispatch('dict/removeDict', this.queryParams.dictType);
               this.$modal.msgSuccess("新增成功");
               this.open = false;
@@ -382,9 +371,9 @@ export default {
     },
     /** 删除按钮操作 */
     handleDelete(row) {
-      const dictCodes = row.dictCode || this.ids;
-      this.$modal.confirm('是否确认删除字典编码为"' + dictCodes + '"的数据项？').then(function() {
-        return delData(dictCodes);
+      const dictIds = row.dictId || this.ids;
+      this.$modal.confirm('是否确认删除字典编码为"' + dictIds + '"的数据项？').then(function () {
+        return delData(dictIds);
       }).then(() => {
         this.getList();
         this.$modal.msgSuccess("删除成功");

@@ -4,7 +4,6 @@ import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.JPQLQueryFactory;
 import com.ruoyi.common.constant.UserConstants;
 import com.ruoyi.common.core.domain.TreeSelect;
-import com.ruoyi.common.core.domain.entity.SysRole;
 import com.ruoyi.common.core.domain.entity.SysUser;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
@@ -14,7 +13,6 @@ import com.ruoyi.system.converter.SysDeptConverter;
 import com.ruoyi.system.dto.SysDeptInsertDTO;
 import com.ruoyi.system.dto.SysDeptUpdateDTO;
 import com.ruoyi.system.entity.SysDept;
-import com.ruoyi.system.mapper.SysRoleMapper;
 import com.ruoyi.system.query.SysDeptQuery;
 import com.ruoyi.system.repository.SysDeptRepository;
 import com.ruoyi.system.service.SysDeptService;
@@ -23,6 +21,7 @@ import jakarta.annotation.Resource;
 import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 import static com.ruoyi.system.entity.QSysDept.sysDept;
@@ -40,9 +39,6 @@ public class SysDeptServiceImpl implements SysDeptService {
     private SysDeptConverter sysDeptConverter;
     @Resource
     private SysDeptRepository sysDeptRepository;
-
-    @Resource
-    private SysRoleMapper roleMapper;
 
     @Resource
     private JPQLQueryFactory jpqlQueryFactory;
@@ -203,8 +199,7 @@ public class SysDeptServiceImpl implements SysDeptService {
      */
     @Override
     public List<Long> selectDeptListByRoleId(Long roleId) {
-        SysRole role = roleMapper.selectRoleById(roleId);
-        return sysDeptRepository.selectDeptListByRoleId(roleId, role.isDeptCheckStrictly());
+        return Collections.emptyList();
     }
 
     /**
